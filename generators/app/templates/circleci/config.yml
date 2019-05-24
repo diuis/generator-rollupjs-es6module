@@ -1,0 +1,92 @@
+version: 2.1
+
+executors:
+  node_executor:
+    docker:
+      - image: circleci/node:11
+
+jobs:
+  job-build:
+    executor: node_executor
+    steps:
+      - checkout
+      - run:
+          name: installing node modules...
+          command: yarn install --ignore-optional
+      - run:
+          name: building...
+          command: yarn build
+  job-deploy_module:
+    executor: node_executor
+    parameters:
+      releaseType:
+        description: could be patch, minor or major
+        type: string
+        default: patch
+    steps:
+      - checkout
+      - run:
+          name: installing node modules...
+          command: yarn install --ignore-optional
+      - run:
+          name: updating package json version...
+          command: |
+            declare -A ALL_RELEASE_TYPES=([patch]=--patch [minor]=--minor [major]=--major)
+            GIT_MESSAGE=`git show -s --format=%b ${CIRCLE_SHA1}`
+            IFS=':' read -ra GIT_MESSAGE_SPLITTED \<<< "${GIT_MESSAGE}"
+            JSONPKG_VERS=${ALL_RELEASE_TYPES[${GIT_MESSAGE_SPLITTED[0]}]:---patch}
+            yarn version --no-git-tag-version ${JSONPKG_VERS}
+      - run:
+          name: building...
+          command: yarn build
+      - run:
+          name: git config...
+          command: |
+            git config --global user.email "${CIRCLE_PROJECT_USERNAME}@<%= gitEmailDomain %>"
+            git config --global user.name "${CIRCLE_PROJECT_USERNAME}"
+      - run:
+          name: pushing new package json version to github repo...
+          command: |
+            git commit -am "updated package json with the new version [ci skip]"
+            git push
+      - run:
+          name: publishing module to github module repo...
+          command: yarn deploy-module
+  job-deploy_branch:
+    executor: node_executor
+    steps:
+      - checkout
+      - run:
+          name: installing node modules...
+          command: yarn install --ignore-optional
+      - run:
+          name: building...
+          command: yarn build
+      - run:
+          name: git config...
+          command: |
+            git config --global user.email "${CIRCLE_PROJECT_USERNAME}@<%= gitEmailDomain %>"
+            git config --global user.name "${CIRCLE_PROJECT_USERNAME}"
+      - run:
+          name: publishing module to github module repo...
+          command: |
+            BRANCH_NAME=`echo ${CIRCLE_BRANCH} | sed 's/','//g'`
+            GITTAG_NAME=${BRANCH_NAME}-${CIRCLE_BUILD_NUM}
+            echo publishing to ${GITTAG_NAME}
+            npx publish-to-git --tag ${GITTAG_NAME}
+
+workflows:
+  workflow-build_and_deploy:
+    jobs:
+      - job-build:
+          filters:
+            branches:
+              ignore: master
+      - job-deploy_branch:
+          filters:
+            branches:
+              ignore: master
+      - job-deploy_module:
+          filters:
+            branches:
+              only: master
