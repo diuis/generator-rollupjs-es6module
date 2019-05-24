@@ -11,7 +11,7 @@
   ],
   "keywords": [
     "yeoman-generator",
-    "generator"
+    "generator",
     "rollupjs",
     "ES6 module",
     "typescript"
