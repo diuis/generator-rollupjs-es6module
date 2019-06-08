@@ -1,6 +1,6 @@
 {
   "name": "generator-rollupjs-es6module",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "rollupjs es6module typescript yeoman generator",
   "main": "index.js",
   "author": "Demis Gallisto",
@@ -18,5 +18,9 @@
   ],
   "dependencies": {
     "yeoman-generator": "^4.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/diuis/generator-rollupjs-es6module"
   }
 }
